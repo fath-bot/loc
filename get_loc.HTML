@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌍 Location Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            text-align: left;
+            border-left: 5px solid #667eea;
+            display: none;
+        }
+        
+        .loading {
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        
+        .success {
+            color: #28a745;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        
+        .location-info {
+            margin: 15px 0;
+        }
+        
+        .location-info strong {
+            color: #333;
+        }
+        
+        .map-link {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        
+        .map-link:hover {
+            background: #218838;
+        }
+        
+        .coordinates {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 10px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 Detektor Lokasi</h1>
+        <p class="subtitle">Temukan posisi Anda dengan GPS atau IP</p>
+        
+        <div class="btn-group">
+            <button class="btn" onclick="getGPSLocation()">
+                📍 Lokasi GPS
+            </button>
+            <button class="btn" onclick="getIPLocation()">
+                🌐 Lokasi IP
+            </button>
+            <button class="btn" onclick="getWeather()">
+                ⛅ Info Cuaca
+            </button>
+        </div>
+        
+        <div id="result" class="result">
+            <!-- Hasil akan muncul di sini -->
+        </div>
+    </div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+        
+        // Format tampilan hasil
+        function showResult(type, content) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = content;
+        }
+        
+        // 1. GPS Location
+        async function getGPSLocation() {
+            showResult('loading', '<div class="loading">🔄 Mendeteksi lokasi GPS...</div>');
+            
+            if (!navigator.geolocation) {
+                showResult('error', '❌ Browser tidak mendukung geolocation');
+                return;
+            }
+            
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 60000
+                    });
+                });
+                
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+                
+                const content = `
+                    <h3 class="success">✅ Lokasi GPS Ditemukan!</h3>
+                    <div class="location-info">
+                        <p><strong>Latitude:</strong> ${lat.toFixed(6)}</p>
+                        <p><strong>Longitude:</strong> ${lng.toFixed(6)}</p>
+                        <p><strong>Akurasi:</strong> ±${accuracy} meter</p>
+                        <div class="coordinates">${lat}, ${lng}</div>
+                    </div>
+                    <a href="https://www.google.com/maps?q=${lat},${lng}" 
+                       target="_blank" class="map-link">
+                       🗺️ Buka di Google Maps
+                    </a>
+                `;
+                
+                showResult('success', content);
+                
+            } catch (error) {
+                let errorMsg = '❌ ';
+                switch(error.code) {
+                    case 1: errorMsg += 'Izin akses lokasi ditolak'; break;
+                    case 2: errorMsg += 'Lokasi tidak tersedia'; break;
+                    case 3: errorMsg += 'Timeout: Terlalu lama mencari lokasi'; break;
+                    default: errorMsg += 'Error tidak diketahui';
+                }
+                showResult('error', errorMsg);
+            }
+        }
+        
+        // 2. IP Location
+        async function getIPLocation() {
+            showResult('loading', '<div class="loading">🔄 Mendeteksi lokasi via IP...</div>');
+            
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                
+                const content = `
+                    <h3 class="success">🌐 Lokasi via IP</h3>
+                    <div class="location-info">
+                        <p><strong>IP Address:</strong> ${data.ip}</p>
+                        <p><strong>Lokasi:</strong> ${data.city}, ${data.region}, ${data.country_name}</p>
+                        <p><strong>Provider:</strong> ${data.org}</p>
+                        <p><strong>Koordinat:</strong> ${data.latitude}, ${data.longitude}</p>
+                        <p><strong>Zona Waktu:</strong> ${data.timezone}</p>
+                    </div>
+                    <a href="https://www.google.com/maps?q=${data.latitude},${data.longitude}" 
+                       target="_blank" class="map-link">
+                       🗺️ Lihat di Peta
+                    </a>
+                `;
+                
+                showResult('success', content);
+                
+            } catch (error) {
+                showResult('error', '❌ Gagal mendapatkan lokasi IP');
+            }
+        }
+        
+        // 3. Weather Info
+        async function getWeather() {
+            showResult('loading', '<div class="loading">🔄 Mendapatkan info cuaca...</div>');
+            
+            // First get location via GPS
+            if (!navigator.geolocation) {
+                showResult('error', '❌ Browser tidak mendukung geolocation');
+                return;
+            }
+            
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+                
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                // Get weather from free API
+                const weatherResponse = await fetch(
+                    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto`
+                );
+                const weatherData = await weatherResponse.json();
+                
+                const weatherCode = weatherData.current_weather.weathercode;
+                const weatherDescription = getWeatherDescription(weatherCode);
+                
+                const content = `
+                    <h3 class="success">⛅ Info Cuaca Lokal</h3>
+                    <div class="location-info">
+                        <p><strong>Suhu Saat Ini:</strong> ${weatherData.current_weather.temperature}°C</p>
+                        <p><strong>Kondisi:</strong> ${weatherDescription}</p>
+                        <p><strong>Kecepatan Angin:</strong> ${weatherData.current_weather.windspeed} km/jam</p>
+                        <p><strong>Arah Angin:</strong> ${weatherData.current_weather.winddirection}°</p>
+                    </div>
+                    <p><em>Data cuaca provided by Open-Meteo</em></p>
+                `;
+                
+                showResult('success', content);
+                
+            } catch (error) {
+                showResult('error', '❌ Gagal mendapatkan info cuaca. Pastikan izin lokasi diberikan.');
+            }
+        }
+        
+        // Helper function untuk deskripsi cuaca
+        function getWeatherDescription(code) {
+            const weatherMap = {
+                0: 'Cerah',
+                1: 'Sebagian cerah',
+                2: 'Berawan',
+                3: 'Mendung',
+                45: 'Berkabut',
+                48: 'Berkabut deposisi rime',
+                51: 'Gerimis ringan',
+                53: 'Gerimis sedang',
+                55: 'Gerimis lebat',
+                61: 'Hujan ringan',
+                63: 'Hujan sedang',
+                65: 'Hujan lebat',
+                80: 'Hujan deras ringan',
+                81: 'Hujan deras sedang',
+                82: 'Hujan deras lebat',
+                95: 'Badai petir',
+                96: 'Badai petir dengan hujan es ringan',
+                99: 'Badai petir dengan hujan es lebat'
+            };
+            return weatherMap[code] || 'Tidak diketahui';
+        }
+    </script>
+</body>
+</html>
